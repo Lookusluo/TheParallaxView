@@ -1,18 +1,11 @@
 ﻿Shader "Custom/BoxBlurV"
 {
-	Properties
-	{
-		_MainTex ("Texture", 2D) = "white" {}
-		//_Near ("Near", Float) = 0.2
-		//_Range ("Range", Float) = 20.0
-		_Spread("Spread", Float) = 5.0
-		_BlurMult("BlurMult", Float) = 5.0
-		//_HalfBlurH("HalfBlurH", Int) = 2
-		//_HalfBlurV("HalfBlurV", Int) = 2
-		_DivBlur("DivBlur", Float) = 1.0
-		_Screen2Tex("Screen2Tex", Vector) = (1.0,1.0,0.0,0.0)
-
-	}
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _Spread ("Blur Spread", Float) = 3.0
+    }
+    
 	SubShader
 	{
 		// No culling or depth
@@ -26,25 +19,31 @@
 			
 			#include "UnityCG.cginc"
 
-			struct appdata
-			{
-				float4 vertex : POSITION;
-				float2 uv : TEXCOORD0;
-			};
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
 
-			struct v2f
-			{
-				float2 uv : TEXCOORD0;
-				float4 vertex : SV_POSITION;
-			};
+            struct v2f
+            {
+                float2 uv : TEXCOORD0;
+                float4 vertex : SV_POSITION;
+            };
 
-			v2f vert (appdata v)
-			{
-				v2f o;
-				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.uv = v.uv;
-				return o;
-			}
+            sampler2D _MainTex;
+            float4 _Screen2Tex;
+            float _Spread;
+            float _BlurMult;
+            float _DivBlur;
+
+            v2f vert (appdata v)
+            {
+                v2f o;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = v.uv;
+                return o;
+            }
 			
 			fixed4 frag (v2f i) : SV_Target
 			{

@@ -142,16 +142,19 @@ void Start() {
     SceneButtons[3] = Scene3;
     SceneButtons[4] = Scene4;
 
-		// setup scene buttons
-		int NoScenes = sceneManager.GetNoScenes();
-		for (int i = 0; i < 5; i++) {
-			if (i < NoScenes) {
-				SceneButtons [i].GetComponentInChildren<Text> ().text = sceneManager.GetSceneName (i);
-			} else {
-				SceneButtons [i].gameObject.SetActive (false);
-			}
-		}
-	}
+        int NoScenes = sceneManager.GetNoScenes();
+        for (int i = 0; i < 5; i++)
+        {
+            if (i < NoScenes)
+            {
+                SceneButtons[i].GetComponentInChildren<Text>().text = sceneManager.GetSceneName(i);
+            }
+            else
+            {
+                SceneButtons[i].gameObject.SetActive(false);
+            }
+        }
+    }
 
 
 	// Update is called once per frame
