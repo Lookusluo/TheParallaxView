@@ -1,86 +1,126 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using Unity.Mathematics;
+using Unity.Collections;
+using Unity.Jobs;
 
-public class Vibranium : MonoBehaviour {
+public class Vibranium : MonoBehaviour 
+{
+    [Header("Sphere Settings")]
+    public GameObject sphere;
+    public int noSpheresX = 20;
+    public int noSpheresY = 3;
+    public int noSpheresZ = 3;
+    public float size = 1.0f;
+    
+    [Header("Animation Settings")]
+    public float sizePerlin = 0.5f;
+    public float ampPerlin = 0.5f;
+    public float freqPerlin = 0.5f;
+    public float speedPerlin = 1.0f;
+    public float ampVibrate = 0.5f;
+    public float speedVibrate = 0.5f;
+    public float phaseVibrate = 0.1f;
 
-	public GameObject sphere;
-	public int noSpheresX = 20;
-	public int noSpheresY = 3;
-	public int noSpheresZ = 3;
-	public float size = 1.0f;
-	public float sizeRnd = 0.5f;
-	public float sizePerlin = 0.5f;
-	public float ampPerlin = 0.5f;
-	public float freqPerlin = 0.5f;
-	public float speedPerlin = 1.0f;
-	public float ampVibrate = 0.5f;
-	public float speedVibrate = 0.5f;
-	public float phaseVibrate = 0.1f;
+    [Header("Materials")]
+    public Material mat1;
+    public Material mat2;
+    public Material mat3;
 
-	public Material mat1;
-	public Material mat2;
-	public Material mat3;
+    private GameObject[] spheres;
+    private NativeArray<float3> basePositions;
+    private NativeArray<float> scales;
+    private ComputeBuffer positionBuffer;
+    private int totalSpheres;
 
+    void Start()
+    {
+        totalSpheres = noSpheresX * noSpheresY * noSpheresZ;
+        spheres = new GameObject[totalSpheres];
+        basePositions = new NativeArray<float3>(totalSpheres, Allocator.Persistent);
+        scales = new NativeArray<float>(totalSpheres, Allocator.Persistent);
 
-	GameObject [] spheres;
+        InitializeSpheres();
+    }
 
-	// Use this for initialization
-	void Start () {
-		spheres = new GameObject[noSpheresX * noSpheresY * noSpheresZ];
-		int i = 0;
-		for (int x = 0; x < noSpheresX; x++) {
-			for (int y = 0; y < noSpheresY; y++) {
-				for (int z = 0; z < noSpheresZ; z++) {
-					spheres [i] = Instantiate (sphere, this.transform);
-					spheres [i].transform.localPosition = new Vector3 (x, y, z);
-					spheres [i].transform.localScale = new Vector3 (size, size, size);
+    private void InitializeSpheres()
+    {
+        int i = 0;
+        for (int x = 0; x < noSpheresX; x++)
+        {
+            for (int y = 0; y < noSpheresY; y++)
+            {
+                for (int z = 0; z < noSpheresZ; z++)
+                {
+                    spheres[i] = Instantiate(sphere, transform);
+                    basePositions[i] = new float3(x, y, z);
+                    spheres[i].transform.localPosition = new Vector3(x, y, z);
+                    spheres[i].transform.localScale = Vector3.one * size;
 
+                    var renderer = spheres[i].GetComponent<Renderer>();
+                    renderer.material = z < 2 ? mat3 : (z < 5 ? mat2 : mat1);
 
-					if (z<2) 
-						spheres [i].GetComponent<Renderer> ().material = mat3;
-					else if (z<5) 
-						spheres [i].GetComponent<Renderer> ().material = mat2;
-					else 
-						spheres [i].GetComponent<Renderer> ().material = mat1;
+                    i++;
+                }
+            }
+        }
+    }
 
-					i++;
-				}
-			}
-		}		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-		int i = 0;
+    void Update()
+    {
+        float time = Time.time;
+        JobHandle handle = new JobHandle();
 
-		for (int x = 0; x < noSpheresX; x++) {
-			for (int y = 0; y < noSpheresY; y++) {
-				for (int z = 0; z < noSpheresZ; z++) {
+        for (int i = 0; i < totalSpheres; i++)
+        {
+            float3 basePos = basePositions[i];
+            float3 pos = basePos;
 
-					Vector3 pos = new Vector3 (x, y, z);
+            // Perlin noise displacement
+            pos += CalculatePerlinDisplacement(basePos, time);
 
-					pos.x += ampPerlin * Perlin.Noise (x*freqPerlin + speedPerlin*Time.time, y*freqPerlin, z*freqPerlin);
-					pos.y += ampPerlin * Perlin.Noise (x*freqPerlin + speedPerlin*Time.time, y*freqPerlin, z*freqPerlin + 13.2f);
-					pos.z += ampPerlin * Perlin.Noise (x*freqPerlin + speedPerlin*Time.time, y*freqPerlin, z*freqPerlin + 49.9f);
+            // Scale calculation
+            float scaleP = 1f + sizePerlin * Perlin.Noise(
+                basePos.x * freqPerlin + speedPerlin * time,
+                basePos.y * freqPerlin,
+                basePos.z * freqPerlin + 121.3f
+            );
 
-					float scaleP = 1f + sizePerlin * Perlin.Noise (x*freqPerlin + speedPerlin*Time.time, y*freqPerlin, z*freqPerlin + 121.3f);
+            // Vibration
+            pos += CalculateVibration(scaleP, time, i);
 
-					pos.x += (0.9f*scaleP+0.1f)*ampVibrate*(Mathf.Sin( speedVibrate * Time.time + phaseVibrate*i));
-					pos.y += (0.9f*scaleP+0.1f)*ampVibrate*(Mathf.Cos( speedVibrate * Time.time + phaseVibrate*i));
-					pos.z += (0.9f*scaleP+0.1f)*ampVibrate*(Mathf.Cos( speedVibrate * Time.time + 0.5f*Mathf.PI + phaseVibrate*i));
+            // Apply transformations
+            if (spheres[i] != null)
+            {
+                spheres[i].transform.localPosition = pos;
+                spheres[i].transform.localScale = Vector3.one * size * scaleP;
+            }
+        }
+    }
 
-					spheres [i].transform.localPosition = pos;
+    private float3 CalculatePerlinDisplacement(float3 basePos, float time)
+    {
+        return new float3(
+            ampPerlin * Perlin.Noise(basePos.x * freqPerlin + speedPerlin * time, basePos.y * freqPerlin, basePos.z * freqPerlin),
+            ampPerlin * Perlin.Noise(basePos.x * freqPerlin + speedPerlin * time, basePos.y * freqPerlin, basePos.z * freqPerlin + 13.2f),
+            ampPerlin * Perlin.Noise(basePos.x * freqPerlin + speedPerlin * time, basePos.y * freqPerlin, basePos.z * freqPerlin + 49.9f)
+        );
+    }
 
-					Vector3 scale = new Vector3 (size, size, size);
-					scale *= scaleP;
+    private float3 CalculateVibration(float scaleP, float time, int index)
+    {
+        float scaleFactor = (0.9f * scaleP + 0.1f) * ampVibrate;
+        float phase = speedVibrate * time + phaseVibrate * index;
+        
+        return new float3(
+            scaleFactor * math.sin(phase),
+            scaleFactor * math.cos(phase),
+            scaleFactor * math.cos(phase + 0.5f * math.PI)
+        );
+    }
 
-					spheres [i].transform.localScale = scale;
-
-					i++;
-				}
-			}
-		}		
-	}
+    void OnDestroy()
+    {
+        if (basePositions.IsCreated) basePositions.Dispose();
+        if (scales.IsCreated) scales.Dispose();
+    }
 }

@@ -1,47 +1,67 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.XR.iOS;
+﻿using UnityEngine;
+using UnityEngine.XR.ARFoundation;
+using Unity.XR.CoreUtils;
 
-// this script is for tracking the device camera. it doesn't track much at the moment since the AR session is using UnityARAlignment.UnityARAlignmentCamera, it may be used in the future 
+public class CameraTracker : MonoBehaviour
+{
+    [SerializeField]
+    private Camera trackedCamera;
+    [SerializeField]
+    private XROrigin xrOrigin;
+    private ARCameraManager cameraManager;
+    private ARSession arSession;
+    private bool sessionStarted = false;
 
-public class CameraTracker : MonoBehaviour {
+    void Start()
+    {
+        if (xrOrigin == null)
+        {
+            xrOrigin = FindObjectOfType<XROrigin>();
+        }
+        
+        if (xrOrigin != null)
+        {
+            cameraManager = xrOrigin.Camera.GetComponent<ARCameraManager>();
+            arSession = FindObjectOfType<ARSession>();
+        }
+        
+        if (cameraManager != null)
+        {
+            cameraManager.frameReceived += OnFrameReceived;
+        }
+    }
 
-	[SerializeField]
-	private Camera trackedCamera;
+    void OnDestroy()
+    {
+        if (cameraManager != null)
+        {
+            cameraManager.frameReceived -= OnFrameReceived;
+        }
+    }
 
-	private bool sessionStarted = false;
+    private void OnFrameReceived(ARCameraFrameEventArgs args)
+    {
+        if (!sessionStarted && ARSession.state == ARSessionState.SessionTracking)
+        {
+            sessionStarted = true;
+        }
 
-	//public CameraManager camManager;
+        if (trackedCamera != null && args.projectionMatrix.HasValue)
+        {
+            trackedCamera.projectionMatrix = args.projectionMatrix.Value;
+        }
+    }
 
-	// Use this for initialization
-	void Start () {
-		UnityARSessionNativeInterface.ARFrameUpdatedEvent += FirstFrameUpdate;
-	}
-
-	void OnDestroy()
-	{
-	}
-
-	void FirstFrameUpdate(UnityARCamera cam)
-	{
-		sessionStarted = true;
-		UnityARSessionNativeInterface.ARFrameUpdatedEvent -= FirstFrameUpdate;
-	}
-
-	// Update is called once per frame
-	void Update () {
-		if (trackedCamera != null && sessionStarted) {
-			Matrix4x4 cameraPose = UnityARSessionNativeInterface.GetARSessionNativeInterface ().GetCameraPose ();
-			trackedCamera.transform.localPosition = UnityARMatrixOps.GetPosition (cameraPose);
-			trackedCamera.transform.localRotation = UnityARMatrixOps.GetRotation (cameraPose);
-
-			//Debug.Log ("device cam rotation: " + trackedCamera.transform.localRotation + " device cam position: " + trackedCamera.transform.localPosition);
-			//if (camManager.EyeCamUsed) {
-			//	trackedCamera.transform.localRotation = new Quaternion (0, 0, 0, -1); // don't use device rotation (landscape, portrait etc)
-			//}
-
-			trackedCamera.projectionMatrix = UnityARSessionNativeInterface.GetARSessionNativeInterface ().GetCameraProjection ();
-		}
-	}
+    void Update()
+    {
+        if (trackedCamera != null && sessionStarted && xrOrigin != null)
+        {
+            var arCamera = xrOrigin.Camera;
+            if (arCamera != null)
+            {
+                trackedCamera.transform.position = arCamera.transform.position;
+                trackedCamera.transform.rotation = arCamera.transform.rotation;
+            }
+        }
+    }
 }

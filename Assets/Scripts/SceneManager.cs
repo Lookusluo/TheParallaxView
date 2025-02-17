@@ -35,27 +35,37 @@ public class SceneManager : MonoBehaviour {
 	}
 
 	public void SetActiveScene(int SceneNo) {
-		for (int i = 0; i < Scenes.Count; i++) {
-			SceneInfo si = Scenes [i].GetComponent<SceneInfo> ();
-			if (i == SceneNo) {
-				Scenes [i].SetActive (true);
-				RenderSettings.ambientLight = si.ambientLight;
-				headLight.gameObject.SetActive (si.headLight);
-				EyeCam.backgroundColor = si.bgColor;
+    if (SceneNo < 0 || SceneNo >= Scenes.Count) return;
 
-				if (SceneNo == 3) { // hack! this should be part of scene info
-					pblur.enabled = true;
-					pblur.Activate();
-				} else {
-					pblur.DeActivate ();
-					pblur.enabled = false;
-				}
+    foreach (var scene in Scenes) {
+        SceneInfo si = scene.GetComponent<SceneInfo>();
+        bool isActiveScene = (scene == Scenes[SceneNo]);
+        
+        scene.SetActive(isActiveScene);
+        
+        if (isActiveScene) {
+            RenderSettings.ambientLight = si.ambientLight;
+            headLight.gameObject.SetActive(si.headLight);
+            EyeCam.backgroundColor = si.bgColor;
 
-			} else {
-				Scenes [i].SetActive (false);
-			}
-		}
-	}
+            // 更新后处理效果
+            UpdatePostProcessing(SceneNo);
+        }
+    }
+}
+
+private void UpdatePostProcessing(int sceneIndex)
+{
+    if (pblur != null)
+    {
+        bool enableBlur = (sceneIndex == 3);
+        pblur.enabled = enableBlur;
+        if (enableBlur)
+            pblur.Activate();
+        else
+            pblur.DeActivate();
+    }
+}
 
 	// kinda hacky, just sets the brightness of one scene: "the void"
 	public void TheVoidSetBrightness( float value ) {

@@ -1,63 +1,64 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.XR.ARFoundation;
 
+public class CameraManager : MonoBehaviour
+{
+    [SerializeField]
+    private Camera worldCamera;
+    [SerializeField]
+    private Camera eyeCamera;
+    [SerializeField]
+    private Camera deviceCamera;
+    [SerializeField]
+    private GameObject deviceCameraViz;
+    [SerializeField]
+    private GameObject eyeCameraViz;
+    [SerializeField]
+    private ARCameraManager arCameraManager;
 
-// this script is just for selecting which camera is rendering
-// it's called from the UI buttons that allow the user to select camera
+    public bool EyeCamUsed { get; private set; } = true;
+    public bool DeviceCamUsed { get; private set; } = false;
 
-public class CameraManager : MonoBehaviour {
+    private void Start()
+    {
+        if (arCameraManager == null)
+            arCameraManager = FindObjectOfType<ARCameraManager>();
+            
+        UpdateCameraState();
+    }
 
-	public Camera WorldCam;
-	public Camera EyeCam;
-	public Camera DeviceCam;
-	public GameObject DeviceCamViz;
-	public GameObject EyeCamViz;
+    public void SetWorldCam()
+    {
+        EyeCamUsed = false;
+        DeviceCamUsed = false;
+        UpdateCameraState();
+    }
 
+    public void SetEyeCam()
+    {
+        EyeCamUsed = true;
+        DeviceCamUsed = false;
+        UpdateCameraState();
+    }
 
-	public bool EyeCamUsed = true;
-	public bool DeviceCamUsed = false;
+    public void SetDeviceCam()
+    {
+        EyeCamUsed = false;
+        DeviceCamUsed = true;
+        UpdateCameraState();
+    }
 
-	// Use this for initialization
-	void Start () {
+    private void UpdateCameraState()
+    {
+        worldCamera.gameObject.SetActive(!EyeCamUsed && !DeviceCamUsed);
+        eyeCamera.enabled = EyeCamUsed;
+        deviceCamera.enabled = DeviceCamUsed;
+        deviceCameraViz.SetActive(!DeviceCamUsed);
+        eyeCameraViz.SetActive(!EyeCamUsed);
 
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
-
-
-	public void SetWorldCam() {
-		WorldCam.gameObject.SetActive(true);
-		EyeCam.enabled = false;
-		DeviceCam.enabled = false;
-		EyeCamUsed = false;
-		DeviceCamViz.SetActive (false);
-		EyeCamViz.SetActive (true);
-		DeviceCamUsed = false;
-	}
-
-	public void SeEyeCam() {
-		WorldCam.gameObject.SetActive(false);
-		EyeCam.enabled = true;
-		DeviceCam.enabled = false;
-		EyeCamUsed = true;
-		DeviceCamViz.SetActive (false);
-		EyeCamViz.SetActive (false);
-		DeviceCamUsed = false;
-	}
-
-	public void SetTrackedCam() {
-		WorldCam.gameObject.SetActive(false);
-		EyeCam.enabled = false;
-		DeviceCam.enabled = true;
-		EyeCamUsed = false;
-		DeviceCamViz.SetActive (false);
-		EyeCamViz.SetActive (true);
-		DeviceCamUsed = true;
-	}
-
-
+        if (arCameraManager != null)
+        {
+            arCameraManager.enabled = DeviceCamUsed;
+        }
+    }
 }

@@ -57,56 +57,50 @@ public class PostBlur : MonoBehaviour {
 	}
 
 
-	void OnRenderImage(RenderTexture src, RenderTexture dst) {
-		if (isActive) {
+	void OnRenderImage(RenderTexture src, RenderTexture dst)
+	{
+	    if (!isActive || matH == null || matV == null)
+	    {
+	        Graphics.Blit(src, dst);
+	        return;
+	    }
+	
+	    Vector2 texelSize = new Vector2(1f / Screen.width, 1f / Screen.height);
+	    matH.SetVector("_Screen2Tex", texelSize);
+	    matV.SetVector("_Screen2Tex", texelSize);
+	    
+	    float divBlur = 1f / 11f;
+	    matH.SetFloat("_DivBlur", divBlur);
+	    matV.SetFloat("_DivBlur", divBlur);
+	
+	    RenderTexture temp = RenderTexture.GetTemporary(Screen.width, Screen.height);
+	    
+	    // 应用多遍模糊
+	    ApplyBlurPass(src, temp, dst);
+	
+	    RenderTexture.ReleaseTemporary(temp);
+	}
 
-			//mat.SetVector ("_Screen2Tex", new Vector4( 1f / Screen.width, 1f/Screen.height, 0f, 0f ));
-			matH.SetVector ("_Screen2Tex", new Vector4( 1f / Screen.width, 1f/Screen.height, 0f, 0f ));
-			matV.SetVector ("_Screen2Tex", new Vector4( 1f / Screen.width, 1f/Screen.height, 0f, 0f ));
-			matH.SetFloat ("_DivBlur", 1f / 11f);
-			matV.SetFloat ("_DivBlur", 1f / 11f);
-
-			//Graphics.Blit (src, dst, mat);
-
-			RenderTexture tmp = RenderTexture.GetTemporary (Screen.width, Screen.height);
-
-			matH.SetFloat ("_Spread", pass1_Spread);
-			matH.SetFloat ("_BlurMult", pass1_BlurMult);
-			//matH.SetInt ("_HalfBlurH", pass1_HalfBlurH);
-			//matH.SetInt ("_HalfBlurV", pass1_HalfBlurV);
-			//matH.SetFloat ("_DivBlur", 1f / ((1f + 2f * pass1_HalfBlurH) * (1f + 2f * pass1_HalfBlurV)));
-			//matH.SetFloat ("_DivBlur", 1f / 11f);
-
-			Graphics.Blit (src, tmp, matH);
-
-			matV.SetFloat ("_Spread", pass2_Spread);
-			matV.SetFloat ("_BlurMult", pass2_BlurMult);
-			//matV.SetInt ("_HalfBlurH", pass2_HalfBlurH);
-			//matV.SetInt ("_HalfBlurV", pass2_HalfBlurV);
-			//matV.SetFloat ("_DivBlur", 1f / ((1f + 2f * pass2_HalfBlurH) * (1f + 2f * pass2_HalfBlurV)));
-
-
-			Graphics.Blit (tmp, src, matV);
-
-			matH.SetFloat ("_Spread", pass3_Spread);
-			matH.SetFloat ("_BlurMult", pass3_BlurMult);
-			//matH.SetInt ("_HalfBlurH", pass3_HalfBlurH);
-			//matH.SetInt ("_HalfBlurV", pass3_HalfBlurV);
-			//matH.SetFloat ("_DivBlur", 1f / ((1f + 2f * pass3_HalfBlurH) * (1f + 2f * pass3_HalfBlurV)));
-
-
-			Graphics.Blit (src, tmp, matH);
-
-			matV.SetFloat ("_Spread", pass4_Spread);
-			matV.SetFloat ("_BlurMult", pass4_BlurMult);
-			//matV.SetInt ("_HalfBlurH", pass4_HalfBlurH);
-			//matV.SetInt ("_HalfBlurV", pass4_HalfBlurV);
-			//matV.SetFloat ("_DivBlur", 1f / ((1f + 2f * pass4_HalfBlurH) * (1f + 2f * pass4_HalfBlurV)));
-
-
-			Graphics.Blit (tmp, dst, matV);
-
-			RenderTexture.ReleaseTemporary(tmp);
-		}
+	private void ApplyBlurPass(RenderTexture source, RenderTexture temp, RenderTexture destination)
+	{
+	    // Pass 1
+	    matH.SetFloat("_Spread", pass1_Spread);
+	    matH.SetFloat("_BlurMult", pass1_BlurMult);
+	    Graphics.Blit(source, temp, matH);
+	
+	    // Pass 2
+	    matV.SetFloat("_Spread", pass2_Spread);
+	    matV.SetFloat("_BlurMult", pass2_BlurMult);
+	    Graphics.Blit(temp, source, matV);
+	
+	    // Pass 3
+	    matH.SetFloat("_Spread", pass3_Spread);
+	    matH.SetFloat("_BlurMult", pass3_BlurMult);
+	    Graphics.Blit(source, temp, matH);
+	
+	    // Pass 4
+	    matV.SetFloat("_Spread", pass4_Spread);
+	    matV.SetFloat("_BlurMult", pass4_BlurMult);
+	    Graphics.Blit(temp, destination, matV);
 	}
 }

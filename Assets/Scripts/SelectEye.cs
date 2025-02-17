@@ -1,55 +1,48 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.XR.ARFoundation;
 
-// this script doesn't actually select which eye to track (that happens in HeadTrackManager) 
-// this script merely moves the eye camera to the correct place (taking IPD into account)
-// and also move the red dots that represen the eyes to the correct places
+public class SelectEye : MonoBehaviour 
+{
+    public ARFaceTrackingManager headTrackManager;
+    public CameraManager camManager;
+    public Transform leftEye;
+    public Transform rightEye;
+    public Transform thirdEye;
 
-public class SelectEye : MonoBehaviour {
+    [SerializeField]
+    private float smoothingFactor = 0.1f;
+    private Vector3 targetPosition;
 
-	public HeadTrackManager headTrackManager;
-	public CameraManager camManager;
-	public Transform leftEye;
-	public Transform rightEye;
-	public Transform thirdEye;
+    void Update()
+    {
+        Vector3 pos = transform.localPosition;
+        float IPD = headTrackManager.IPD;
+        float EyeHeight = headTrackManager.EyeHeight;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
+        float dist = IPD * 0.001f * 0.5f;
+        float height = EyeHeight * 0.001f;
 
-		Vector3 pos = transform.localPosition;
-		float IPD = headTrackManager.IPD;
-		float EyeHeight = headTrackManager.EyeHeight;
+        // Calculate target position based on selected eye
+        targetPosition = pos;
+        if (headTrackManager.openEye == ARFaceTrackingManager.OpenEye.Right)
+        {
+            targetPosition.x = camManager.DeviceCamUsed ? dist : -dist;
+        }
+        else
+        {
+            targetPosition.x = camManager.DeviceCamUsed ? -dist : dist;
+        }
 
-		float dist = IPD * 0.001f * 0.5f; //in metres and half
-		float height = EyeHeight * 0.001f;
+        // Apply smoothing to camera movement
+        transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, smoothingFactor * Time.deltaTime);
 
-		if (headTrackManager.openEye == HeadTrackManager.OpenEye.Right) { // move camera to open eye
-			if (!camManager.DeviceCamUsed)
-				pos.x = -dist;
-			else
-				pos.x = dist; // mirror in device cam
-		} else {
-			if (!camManager.DeviceCamUsed)
-				pos.x = dist;
-			else
-				pos.x = -dist; 
-		}
-		transform.localPosition = pos;
+        // Update third eye height with smoothing
+        Vector3 thirdEyePos = thirdEye.transform.localPosition;
+        thirdEyePos.y = Mathf.Lerp(thirdEyePos.y, height, smoothingFactor * Time.deltaTime);
+        thirdEye.transform.localPosition = thirdEyePos;
 
-		pos = thirdEye.transform.localPosition;
-		pos.y = height;
-		thirdEye.transform.localPosition = pos;
-
-		// update eye positions, only for visualization purpose
-
-		rightEye.localPosition = new Vector3 (dist, 0, 0);
-		leftEye.localPosition = new Vector3 (-dist, 0, 0);
-
-	}
+        // Update visualization markers
+        rightEye.localPosition = new Vector3(dist, 0, 0);
+        leftEye.localPosition = new Vector3(-dist, 0, 0);
+    }
 }

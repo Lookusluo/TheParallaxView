@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.XR.ARKit;
 
 // this script manages UI buttons and functions 
 
@@ -129,26 +130,18 @@ public class UIManager : MonoBehaviour {
 			Screen.sleepTimeout = SleepTimeout.SystemSetting;
 		}
 	}
+    
+void Start() {
 
-	// Use this for initialization
-	void Start () {
+    RequireIPhoneXPanel.SetActive(true);
 
-        bool deviceIsIphoneX = (UnityEngine.iOS.Device.generation == UnityEngine.iOS.DeviceGeneration.iPhoneX  ||
-                                UnityEngine.iOS.Device.generation == UnityEngine.iOS.DeviceGeneration.iPhoneXS ||
-                                UnityEngine.iOS.Device.generation == UnityEngine.iOS.DeviceGeneration.iPhoneXR   ); 
-
-
-        if (!deviceIsIphoneX) {
-			RequireIPhoneXPanel.SetActive (true);
-		}
-
-		// ugly but I don't wanna figure out how to dynamically create UI buttons right now TODO
-		Button[] SceneButtons = new Button[5];
-		SceneButtons [0] = Scene0;
-		SceneButtons [1] = Scene1;
-		SceneButtons [2] = Scene2;
-		SceneButtons [3] = Scene3;
-		SceneButtons [4] = Scene4;
+    // 设置场景按钮
+    Button[] SceneButtons = new Button[5];
+    SceneButtons[0] = Scene0;
+    SceneButtons[1] = Scene1;
+    SceneButtons[2] = Scene2;
+    SceneButtons[3] = Scene3;
+    SceneButtons[4] = Scene4;
 
 		// setup scene buttons
 		int NoScenes = sceneManager.GetNoScenes();

@@ -2,17 +2,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LookFromHead : MonoBehaviour {
+public class LookFromHead : MonoBehaviour 
+{
+    public Transform head;
+    public float rotationSmoothing = 0.1f;
+    private Quaternion targetRotation;
 
-	public Transform head;
-
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		this.gameObject.transform.rotation = Quaternion.LookRotation (-head.position);	
-	}
+    void Update()
+    {
+        if (head != null)
+        {
+            targetRotation = Quaternion.LookRotation(-head.position);
+            transform.rotation = Quaternion.Lerp(
+                transform.rotation,
+                targetRotation,
+                Time.deltaTime / rotationSmoothing
+            );
+        }
+    }
 }

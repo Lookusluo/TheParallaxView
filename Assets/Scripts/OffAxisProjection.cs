@@ -1,104 +1,97 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-// this script is for setting up the non-symmetric camera frustom and compute the off-axis projection matrix used for the eye camera
+﻿using UnityEngine;
 
 [ExecuteInEditMode]
 public class OffAxisProjection : MonoBehaviour
 {
+    public Camera deviceCamera;
+    public Camera eyeCamera;
+    public LineRenderer lineRenderer;
+    public CameraManager camManager;
 
-	public Camera deviceCamera;
-	public Camera eyeCamera;
+    public float left, right, bottom, top, near, far;
+    public float nearDist;
 
-	public LineRenderer lineRenderer;
+    void LateUpdate()
+    {
+        if (!deviceCamera || !eyeCamera) return;
 
-	public float left, right, bottom, top, near, far;
+        // 更新相机朝向
+        eyeCamera.transform.rotation = deviceCamera.transform.rotation * Quaternion.Euler(Vector3.up * 180);
 
-	public CameraManager camManager;
+        Vector3 deviceCamPos = eyeCamera.transform.worldToLocalMatrix.MultiplyPoint(deviceCamera.transform.position);
+        Vector3 fwd = eyeCamera.transform.worldToLocalMatrix.MultiplyVector(deviceCamera.transform.forward);
+        
+        // 计算视锥体参数
+        CalculateFrustumParameters(deviceCamPos, fwd);
+        
+        // 更新可视化
+        UpdateFrustumVisualization(deviceCamPos);
+        
+        // 应用投影矩阵
+        ApplyProjectionMatrix();
+    }
 
-	public float nearDist;
+    private void CalculateFrustumParameters(Vector3 deviceCamPos, Vector3 fwd)
+    {
+        // iPhone设备尺寸参数（单位：米）
+        left = deviceCamPos.x - 0.000f;
+        right = deviceCamPos.x + 0.135f;
+        top = deviceCamPos.y + 0.022f;
+        bottom = deviceCamPos.y - 0.040f;
+        
+        Plane device_plane = new Plane(fwd, deviceCamPos);
+        Vector3 close = device_plane.ClosestPointOnPlane(Vector3.zero);
+        near = close.magnitude;
+        far = 10f;
 
-	void LateUpdate()
-	{
-		// look opposite direction of device cam
-		Quaternion q = deviceCamera.transform.rotation * Quaternion.Euler(Vector3.up * 180);
-		eyeCamera.transform.rotation = q;
+        // 调整近平面
+        float scale_factor = 0.01f / near;
+        near *= scale_factor;
+        left *= scale_factor;
+        right *= scale_factor;
+        top *= scale_factor;
+        bottom *= scale_factor;
+    }
 
-		Vector3 deviceCamPos = eyeCamera.transform.worldToLocalMatrix.MultiplyPoint( deviceCamera.transform.position ); // find device camera in rendering camera's view space
-		Vector3 fwd = eyeCamera.transform.worldToLocalMatrix.MultiplyVector (deviceCamera.transform.forward); // normal of plane defined by device camera
-		Plane device_plane = new Plane( fwd, deviceCamPos);
+    private void UpdateFrustumVisualization(Vector3 deviceCamPos)
+    {
+        if (lineRenderer != null && camManager != null)
+        {
+            lineRenderer.enabled = !camManager.EyeCamUsed;
+            if (lineRenderer.enabled)
+            {
+                UpdateLineRendererPositions(deviceCamPos);
+            }
+        }
+    }
 
-		Vector3 close = device_plane.ClosestPointOnPlane (Vector3.zero);
-		near = close.magnitude;
+    private void UpdateLineRendererPositions(Vector3 deviceCamPos)
+    {
+        if (lineRenderer != null)
+        {
+            Vector3[] positions = new Vector3[8];
+            
+            // Near plane corners
+            positions[0] = new Vector3(left, bottom, near);
+            positions[1] = new Vector3(right, bottom, near);
+            positions[2] = new Vector3(right, top, near);
+            positions[3] = new Vector3(left, top, near);
+            positions[4] = positions[0];
+            
+            // Connect to device camera
+            positions[5] = deviceCamPos;
+            positions[6] = positions[2];
+            positions[7] = positions[3];
+    
+            lineRenderer.positionCount = positions.Length;
+            lineRenderer.SetPositions(positions);
+        }
+    }
 
-		// couldn't get device orientation to work properly in all cases, so just landscape for now (it's just the UI that is locked to landscape, everyting else works just fine)
-		/*if (Screen.orientation == ScreenOrientation.Portrait) { 
-			left = trackedCamPos.x - 0.040f; // portrait iphone X
-			right = trackedCamPos.x + 0.022f;
-			top = trackedCamPos.y + 0.000f;
-			bottom = trackedCamPos.y - 0.135f;
-		} else {*/
-
-		// landscape iPhone X, measures in meters
-		left = deviceCamPos.x - 0.000f;
-		right = deviceCamPos.x + 0.135f;
-		top = deviceCamPos.y + 0.022f;
-		bottom = deviceCamPos.y - 0.040f;
-
-		far = 10f; // may need bigger for bigger scenes, max 10 metres for now
-
-		Vector3 topLeft = new Vector3 (left, top, near);
-		Vector3 topRight = new Vector3 (right, top, near);
-		Vector3 bottomLeft = new Vector3 (left, bottom, near);
-		Vector3 bottomRight = new Vector3 (right, bottom, near);
-
-
-		if (lineRenderer != null && camManager != null) {
-			if (camManager.EyeCamUsed) {
-				lineRenderer.enabled = false;
-			} else {
-
-				// visualise frustum. or more exactly, the 4 sided pyramid in front of the actual frustum
-				lineRenderer.enabled = true;
-
-				Vector3 w_topLeft = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (topLeft);
-				Vector3 w_topRight = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (topRight);
-				Vector3 w_bottomLeft = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (bottomLeft);
-				Vector3 w_bottomRight = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (bottomRight);
-
-				if (camManager.DeviceCamUsed) {
-					// flip on x. still a bit unsure what is correct here (in device cam mirrored view) but I like this visualisation.
-					w_topLeft = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (new Vector3 (topLeft.x, topLeft.y, topLeft.z));
-					w_topRight = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (new Vector3 (topRight.x, topRight.y, topRight.z));
-					w_bottomLeft = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (new Vector3 (bottomLeft.x, bottomLeft.y, bottomLeft.z));
-					w_bottomRight = eyeCamera.transform.localToWorldMatrix.MultiplyPoint (new Vector3 (bottomRight.x, bottomRight.y, bottomRight.z));
-				}
-
-				lineRenderer.SetPosition (0, eyeCamera.transform.position);
-				lineRenderer.SetPosition (1, w_topLeft);
-				lineRenderer.SetPosition (2, w_topRight);
-				lineRenderer.SetPosition (3, eyeCamera.transform.position);
-				lineRenderer.SetPosition (4, w_bottomLeft);
-				lineRenderer.SetPosition (5, w_bottomRight);
-				lineRenderer.SetPosition (6, eyeCamera.transform.position);
-			} 
-		}
-
-		nearDist = near;
-
-		// move near to 0.01 (1 cm from eye)
-		float scale_factor = 0.01f / near;
-		near *= scale_factor;
-		left *= scale_factor;
-		right *= scale_factor;
-		top *= scale_factor;
-		bottom *= scale_factor;
-
-		Matrix4x4 m = PerspectiveOffCenter(left, right, bottom, top, near, far);
-		eyeCamera.projectionMatrix = m;
-
-	}
+    private void ApplyProjectionMatrix()
+    {
+        eyeCamera.projectionMatrix = PerspectiveOffCenter(left, right, bottom, top, near, far);
+    }
 
 	static Matrix4x4 PerspectiveOffCenter(float left, float right, float bottom, float top, float near, float far)
 	{

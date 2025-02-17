@@ -38,6 +38,12 @@
 				float4 vertex : SV_POSITION;
 			};
 
+			sampler2D _MainTex;
+			float4 _Screen2Tex;
+			float _Spread;
+			float _BlurMult;
+			float _DivBlur;
+			
 			v2f vert (appdata v)
 			{
 				v2f o;
@@ -46,46 +52,19 @@
 				return o;
 			}
 			
-			sampler2D _MainTex;
-//			sampler2D _CameraDepthTexture;
-
-			//float _Near;
-			//float _Range;
-			float _Spread;
-			float _BlurMult;
-			float4 _Screen2Tex;
-			//int _HalfBlurH;
-			//int _HalfBlurV;
-			float _DivBlur;
-
 			fixed4 frag (v2f i) : SV_Target
 			{
-				float4 col = tex2D(_MainTex, i.uv);
-			
-				float4 blur_sum = 0;
-
-				//for (int x = -_HalfBlurH; x<=_HalfBlurH; x++) {
-				for (int x = -5; x<=5; x++) {
-					//for (int y = -_HalfBlurV; y<=_HalfBlurV; y++) {
-						float2 uv = i.uv + _Spread*_Screen2Tex.xy*float2(x,0);
-
-						float4 c = tex2D(_MainTex, uv );
-
-						if (c.r==1.0) c = col;
-
-						float d = (c.r*_BlurMult-1.0) * _Spread;
-						//float l = x;
-
-						float cd = clamp( (d-x), 0.0, 1.0);
-						float cl = 1.0-cd;
-
-						blur_sum += cd*c + cl*col;
-					//}
+				fixed4 col = 0;
+				float spread = _Spread * _Screen2Tex.x * _BlurMult;
+				
+				for(int x = -5; x <= 5; x++)
+				{
+					col += tex2D(_MainTex, i.uv + float2(x * spread, 0));
 				}
-				col = blur_sum*_DivBlur;
+				
+				col *= _DivBlur;
 				return col;
 			}
-
 			ENDCG
 		}
 	}

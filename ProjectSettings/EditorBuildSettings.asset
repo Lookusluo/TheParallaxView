@@ -8,3 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/HeadTrackScene.unity
     guid: 6989566780b5044d385535af7a90796e
+  m_configObjects:
+    UnityEditor.XR.ARKit.ARKitSettings: {fileID: 11400000, guid: c4775552a174e4e888447e5c230ccbcd,
+      type: 2}
+    com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: e8c97defe9de5429cb69d46ad90084ba,
+      type: 2}
+  m_UseUCBPForAssetBundles: 0
