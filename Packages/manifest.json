@@ -14,7 +14,6 @@
     "com.unity.timeline": "1.8.7",
     "com.unity.ugui": "2.0.0",
     "com.unity.xr.arfoundation": "6.0.5",
-    "com.unity.xr.arkit": "6.0.5",
     "com.unity.xr.management": "4.5.0"
   }
 }

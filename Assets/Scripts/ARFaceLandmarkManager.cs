@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
-using UnityEngine.XR.ARKit;
 
 [RequireComponent(typeof(ARFace))]
 public class ARFaceLandmarkManager : MonoBehaviour
@@ -9,18 +8,12 @@ public class ARFaceLandmarkManager : MonoBehaviour
     private GameObject eyePositionMarker;
     
     private ARFace arFace;
-    private ARKitFaceSubsystem arKitFaceSubsystem;
     private GameObject leftEyeMarker;
     private GameObject rightEyeMarker;
 
     private void Awake()
     {
         arFace = GetComponent<ARFace>();
-        var faceManager = FindObjectOfType<ARFaceManager>();
-        if (faceManager != null)
-        {
-            arKitFaceSubsystem = (ARKitFaceSubsystem)faceManager.subsystem;
-        }
     }
 
     private void OnEnable()
@@ -45,7 +38,7 @@ public class ARFaceLandmarkManager : MonoBehaviour
 
     private void OnFaceUpdated(ARFaceUpdatedEventArgs args)
     {
-        if (arKitFaceSubsystem != null && arFace.trackingState == UnityEngine.XR.ARSubsystems.TrackingState.Tracking)
+        if (arFace.trackingState == UnityEngine.XR.ARSubsystems.TrackingState.Tracking)
         {
             UpdateEyePositions();
         }
